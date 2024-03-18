@@ -1,8 +1,12 @@
-example: fileio_feature_close
-=============================
+example: stdio_vs_xscope
+========================
 
-This example shows how to use open and close files with xscope_fileio. 
- 
+This test compares the performance of the standard C stdio
+file I/O functions with the xscope_fileio functions.
+It generates a table with the results of the tests.
+
+``#define TEST_STDIO`` is used to rather test the standard C stdio file I/O functions or xscope_fileio functions. 
+
 Build example
 -------------
 Run the following command from the current directory: 
@@ -11,7 +15,6 @@ Run the following command from the current directory:
 
   cmake -G "Unix Makefiles" -B build
   xmake -C build
-
 
 Running example
 ---------------
@@ -32,8 +35,3 @@ Stdio test:
 .. code-block:: console
 
   xrun --xscope bin/stdio_vs_xscope.xe
-
-Output
-------
-
-The output will be several files in the current directory inside the output folder. 
