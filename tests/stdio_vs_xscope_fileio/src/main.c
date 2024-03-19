@@ -28,8 +28,9 @@ It generates a table with the results of the tests.
 #define FILENAME_STDIO "file_stdio.in"
 #define FILENAME_STDIO_OUT "file_stdio.out"
 
-const unsigned buffer_start = 1024; //  buffer_start size
-const unsigned buffer_end = 1024 * 1024; // tile limitation
+const unsigned buffer_start = 1024;
+const unsigned size_mb = 1;
+const unsigned buffer_end = 32 * 1024;
 
 float ticks_to_KBPS(unsigned ticks, unsigned num_bytes) {
     const float ticks_per_second = 100000000;
@@ -57,10 +58,19 @@ void create_file(size_t buffer_size) {
 }
 
 void create_file_system(const char* filename, size_t buffer_size) {
-    // Create the command string
     char command[256];
+    int r;
+
+    // first delete the file
+    sprintf(command, "del /S %s", filename);
+    r = system(command);
+    xassert(r == 0 && "Error deleting file");
+    delay_milliseconds(100);
+
+    // Create file
     sprintf(command, "fsutil file createnew %s %d", filename, buffer_size);
-    system(command);
+    r = system(command);
+    xassert(r == 0 && "Error creating file");
     delay_milliseconds(100);
 }
 
@@ -87,17 +97,25 @@ void test_xscope_fileio(size_t buffer_size) {
     unsigned file_size = xscope_ftell(&fp_read);
     unsigned t_tell_end = get_reference_time();
 
+    // to avoid compiler optimization
+    // file_size += rand() % 255; 
+    //printf("File size: %d\n", file_size);
+
     // Seek back to the beginning
     xscope_fseek(&fp_read, 0, SEEK_SET);
 
     // Read file into buffer
     uint8_t buffer[1024];
     size_t num_bytes = 0;
-    unsigned t_read = get_reference_time();
+    uint64_t t_read_total_time = 0;
     do {
+        unsigned t0 = get_reference_time();
         num_bytes = xscope_fread(&fp_read, buffer, sizeof(buffer));
+        unsigned t1 = get_reference_time();
+        t_read_total_time += (t1 - t0);
+
+        buffer[0] += rand() % 255; // to avoid compiler optimization 
     } while (num_bytes > 0);
-    unsigned t_read_end = get_reference_time();
 
     // Close file
     unsigned t_close = get_reference_time();
@@ -108,16 +126,16 @@ void test_xscope_fileio(size_t buffer_size) {
     fp_write = xscope_open_file(FILENAME_OUT, "wb");
 
     // Write buffer to another file
-    // do it in chunks of 1024 bytes
-    // until buffer_size is reached
-    // in a do while
     size_t bytes_to_write = buffer_size;
-    unsigned t_write = get_reference_time();
+    uint64_t t_write_total_time = 0;
     do {
+        unsigned t2 = get_reference_time();
         xscope_fwrite(&fp_write, buffer, sizeof(buffer));
+        unsigned t3 = get_reference_time();
+        t_write_total_time += (t3 - t2);
+
         bytes_to_write -= sizeof(buffer);
     } while (bytes_to_write > 0);
-    unsigned t_write_end = get_reference_time();
 
     // Close file
     xscope_fclose(&fp_write);
@@ -127,8 +145,8 @@ void test_xscope_fileio(size_t buffer_size) {
     print_info(buffer_size, "Close", t_close_end - t_close);
     print_info(buffer_size, "Seek", t_seek_end - t_seek);
     print_info(buffer_size, "Tell", t_tell_end - t_tell);
-    print_info(buffer_size, "Read", t_read_end - t_read);
-    print_info(buffer_size, "Write", t_write_end - t_write);
+    print_info(buffer_size, "Read", t_read_total_time);
+    print_info(buffer_size, "Write", t_write_total_time);
 }
 
 void test_stdio(size_t buffer_size) {
@@ -149,17 +167,24 @@ void test_stdio(size_t buffer_size) {
     unsigned file_size = ftell(fp_read);
     unsigned t_tell_end = get_reference_time();
 
+    // to avoid compiler optimization
+    // file_size += rand() % 255; 
+    //printf("File size: %d\n", file_size);
+
     // Seek back to the beginning
     fseek(fp_read, 0, SEEK_SET);
 
     // Read file into buffer
     uint8_t buffer[1024];
     size_t num_bytes = 0;
-    unsigned t_read = get_reference_time();
+    uint64_t t_read_total_time = 0;
     do {
+        unsigned t0 = get_reference_time();
         num_bytes = fread(buffer, sizeof(uint8_t), sizeof(buffer), fp_read);
+        unsigned t1 = get_reference_time();
+        t_read_total_time += (t1 - t0);
+        buffer[0] += rand() % 255; // to avoid compiler optimization 
     } while (num_bytes > 0);
-    unsigned t_read_end = get_reference_time();
 
     // Close file
     unsigned t_close = get_reference_time();
@@ -172,12 +197,15 @@ void test_stdio(size_t buffer_size) {
 
     // Write buffer to another file
     size_t bytes_to_write = buffer_size;
-    unsigned t_write = get_reference_time();
+    uint64_t t_write_total_time = 0;
     do {
+        unsigned t2 = get_reference_time();
         fwrite(buffer, sizeof(uint8_t), sizeof(buffer), fp_write);
+        unsigned t3 = get_reference_time();
+        t_write_total_time += (t3 - t2);
+
         bytes_to_write -= sizeof(buffer);
     } while (bytes_to_write > 0);
-    unsigned t_write_end = get_reference_time();
 
     // Close file
     fclose(fp_write);
@@ -187,24 +215,24 @@ void test_stdio(size_t buffer_size) {
     print_info(buffer_size, "Close", t_close_end - t_close);
     print_info(buffer_size, "Seek", t_seek_end - t_seek);
     print_info(buffer_size, "Tell", t_tell_end - t_tell);
-    print_info(buffer_size, "Read", t_read_end - t_read);
-    print_info(buffer_size, "Write", t_write_end - t_write);
+    print_info(buffer_size, "Read", t_read_total_time);
+    print_info(buffer_size, "Write", t_write_total_time);
 }
 
 void main_tile0(chanend_t xscope_chan) {
     xscope_io_init(xscope_chan);
     for (
-        unsigned size_bytes=buffer_start; 
-        size_bytes<=buffer_end;
-        size_bytes*=2
-    ){
-    #if TEST_STDIO
+        unsigned size_bytes = buffer_start;
+        size_bytes <= buffer_end;
+        size_bytes <<= 1
+        ) {
+#if TEST_STDIO
         create_file_system(FILENAME_STDIO, size_bytes);
         test_stdio(size_bytes);
-    #else
+#else
         create_file_system(FILENAME, size_bytes);
         test_xscope_fileio(size_bytes);
-    #endif
+#endif
         delay_milliseconds(100);
     }
     xscope_close_all_files();
