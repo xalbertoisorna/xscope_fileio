@@ -27,8 +27,10 @@ class CustomBuildCommand(build):
         if platform.system() in ['Darwin', 'Linux']:
             # Make the host binary
             with pushd("host/"):
-                subprocess.check_output(["cmake", "."])
-                subprocess.check_output(["make"])
+                cmd_cmake = "cmake --fresh -B build"
+                cmd_make = "make -C build"
+                subprocess.check_output(cmd_cmake, shell=True)
+                subprocess.check_output(cmd_make, shell=True)
         build.run(self)
 
 
@@ -40,8 +42,10 @@ class CustomDevelopCommand(develop):
         if platform.system() in ['Darwin', 'Linux']:
             # Make the host binary
             with pushd("host/"):
-                subprocess.check_output(["cmake", "."])
-                subprocess.check_output(["make"])
+                cmd_cmake = "cmake --fresh -B build"
+                cmd_make = "make -C build"
+                subprocess.check_output(cmd_cmake, shell=True)
+                subprocess.check_output(cmd_make, shell=True)
         develop.run(self)
 
 
