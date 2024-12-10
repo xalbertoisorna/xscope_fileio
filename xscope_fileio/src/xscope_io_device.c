@@ -77,6 +77,16 @@ void xscope_io_check_version(){
     xscope_fileio_lock_release();
 }
 
+int xscope_io_check_request_capture(chanend_t c_xscope){
+    xscope_fileio_lock_acquire();
+    int value, bytes_read = 0;
+    xscope_bytes(XSCOPE_ID_REQUEST_HD_CAPTURE, 1, &value);
+    xscope_data_from_host(c_xscope, (char *)&value, &bytes_read);
+    assert(bytes_read = sizeof(value));
+    xscope_fileio_lock_release();
+    return value;
+}
+
 xscope_file_t xscope_open_file(const char* filename, char* attributes){
     /* Wait until xscope_fileio is initialized */
     while(xscope_fileio_is_initialized() == 0) {

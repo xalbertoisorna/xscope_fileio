@@ -29,7 +29,8 @@ enum{
     XSCOPE_ID_TELL          = 5,
     XSCOPE_ID_HOST_QUIT     = 6, 
     XSCOPE_ID_HOST_CLOSE    = 7,
-    XSCOPE_ID_CHECK_VERSION = 8,   
+    XSCOPE_ID_CHECK_VERSION = 8,
+    XSCOPE_ID_REQUEST_HD_CAPTURE = 9
 };
 
 #endif

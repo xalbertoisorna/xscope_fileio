@@ -151,6 +151,14 @@ void xscope_fclose(xscope_file_t *xscope_file);
  */
 void xscope_io_check_version();
 
+/**
+ * @brief Checks if the host has requested a capture
+ * 
+ * @param c_xscope The xscope channel end
+ * @return int  1 if capture requested, 0 otherwise
+ */
+int xscope_io_check_request_capture(chanend_t c_xscope);
+
 #ifdef __XC__
 }
 #endif

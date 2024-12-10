@@ -117,6 +117,22 @@ int send_file_chunk(unsigned file_idx, unsigned req_size)
     return(0);
 }
 
+int read_capture_state_from_file() {
+    char state[2];
+    FILE *file = fopen("img/capture_hd_state.txt", "r");
+    if (file == NULL) {
+        perror("Failed to open state file");
+        return -1; // Indicate an error
+    }
+    if (fgets(state, sizeof(state), file) == NULL) {
+        perror("Failed to read state");
+        fclose(file);
+        return -1; // Indicate an error
+    }
+    fclose(file);
+    return atoi(state); // Convert the state to an integer
+}
+
 /**
  * @brief Record xscope data
  * 
@@ -138,6 +154,14 @@ void xscope_record(
     static unsigned write_size = 0;
 
     switch(id){
+        case XSCOPE_ID_REQUEST_HD_CAPTURE:{
+            int capture_var = read_capture_state_from_file();
+            xscope_ep_request_upload(
+                sizeof(capture_var), 
+                (const unsigned char *)&capture_var
+            );
+            break;
+        }
         case XSCOPE_ID_CHECK_VERSION:
         {
             char host_version[XSCOPE_IO_VERSION_LEN];
