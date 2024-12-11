@@ -98,7 +98,7 @@ class _XrunExitHandler:
             # sys.stderr.write(dump.stdout.decode())
             self.host_process.terminate()
 
-def popenAndCall(onExit, *popenArgs, **popenKWArgs):
+def old_popenAndCall(onExit, *popenArgs, **popenKWArgs):
     """
     Asynchronously runs a subprocess and executes a callback function upon completion.
 
@@ -131,8 +131,10 @@ def popenAndCall(onExit, *popenArgs, **popenKWArgs):
 
     return q.get() # returns immediately after the thread starts
 
-
-
+def popenAndCall(onExit, *popenArgs, **popenKWArgs):
+    proc = subprocess.Popen(*popenArgs, **popenKWArgs)
+    return proc
+    
 def run_on_target(adapter_id, firmware_xe, use_xsim=False, **kwargs):
     """
     Run a target application using xrun or xsim along with a host application.
@@ -211,14 +213,20 @@ def run_on_target(adapter_id, firmware_xe, use_xsim=False, **kwargs):
     host_args = f"{port}"
     host_proc = subprocess.Popen([host_exe] + host_args.split(), **kwargs)
     exit_handler.set_host_process(host_proc)
-    host_proc.wait()
-
-    if host_proc.returncode != 0:
-        xrun_proc.terminate() # The host app won't have stopped xrun so kill it here
-        assert 0, f'\nERROR: host app exited with error code {host_proc.returncode}\n'
-
-    print("Running on target finished")
-
+    error_message = None
+    try:
+        host_proc.wait()
+    except KeyboardInterrupt:
+        error_message = "\nStopping from keyboard interrupt\n"
+    except Exception as e:
+        error_message = f"\nERROR: Host app failed with error: {e}"
+    finally:
+        if error_message:
+            print(error_message)
+        host_proc.terminate()
+        xrun_proc.terminate()
+        host_proc.wait(timeout=10)
+        xrun_proc.wait(timeout=10)
     return host_proc.returncode
 
 
