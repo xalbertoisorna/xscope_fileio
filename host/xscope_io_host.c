@@ -315,6 +315,9 @@ int main(int argc, char *argv[])
             fclose(host_files[idx].fp);
         }
     }
+
+    int packet_len = 1; const char packet[1] =  {EXIT_MARKER_CHAR};
+    xscope_ep_request_upload(packet_len, (const unsigned char *)packet);
     int ret = xscope_ep_disconnect();
     if(VERBOSE) printf("[HOST] xscope_ep_disconnect() returned %d\n", ret);
     return(0);

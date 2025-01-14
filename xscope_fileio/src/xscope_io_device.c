@@ -206,13 +206,14 @@ int xscope_ftell(xscope_file_t *xscope_file){
 }
 
 void xscope_close_all_files(void){
-    xscope_bytes(XSCOPE_ID_HOST_QUIT, 1, (unsigned char*)"!");
-    if(VERBOSE) printf("Sent close files\n");
-    if (!_is_simulation()){
-        hwtimer_t t = hwtimer_alloc(); 
-        hwtimer_delay(t, 5000000); //50ms to allow messages to make it before xgdb quit
-        hwtimer_free(t);
-    }
+    xscope_fileio_lock_acquire();
+    int packet_len; 
+    const unsigned char packet_out[1] = {EXIT_MARKER_CHAR}; char packet_in[1] = {0};
+    xscope_bytes(XSCOPE_ID_HOST_QUIT, 1, packet_out);
+    xscope_data_from_host(c_xscope, packet_in, &packet_len);
+    xassert(packet_len == 1);
+    xassert(packet_in[0] == packet_out[0]);
+    xscope_fileio_lock_release();
 }
 
 void xscope_fclose(xscope_file_t *xscope_file){
