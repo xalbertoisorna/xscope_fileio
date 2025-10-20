@@ -23,6 +23,7 @@
 #include "xscope_io_common.h"
 
 #define VERBOSE                 0
+#define XSCOPE_ID_REQUEST_HD_CAPTURE 9
 
 typedef struct{
     char file_name[MAX_FILENAME_LEN + 1];
@@ -36,6 +37,22 @@ const char end_sting[] = END_MARKER_STRING;
 static unsigned running = 1;
 int device_print_newline = 1; //Used to keep track of newlines for [DEVICE] print prefix
 
+
+int read_capture_state_from_file() {
+    char state[2];
+    FILE *file = fopen("img/capture_hd_state.txt", "r");
+    if (file == NULL) {
+        perror("Failed to open state file");
+        return -1; // Indicate an error
+    }
+    if (fgets(state, sizeof(state), file) == NULL) {
+        perror("Failed to read state");
+        fclose(file);
+        return -1; // Indicate an error
+    }
+    fclose(file);
+    return atoi(state); // Convert the state to an integer
+}
 
 /**
  * @defgroup xscope_fileio_host_c     Doxygen group for XScope file I/O host API
@@ -300,6 +317,14 @@ void xscope_record(
             break;
         }
 
+        case XSCOPE_ID_REQUEST_HD_CAPTURE:{
+            int capture_var = read_capture_state_from_file();
+            xscope_ep_request_upload(
+                sizeof(capture_var), 
+                (const unsigned char *)&capture_var
+            );
+            break;
+        }
         default:
         {
             printf("[HOST] unexpected xSCOPE record event (id [%u] length [%u]\n", id, length);
